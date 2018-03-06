@@ -106,7 +106,7 @@ chmod +x $inst_dir/start
 
 cat > /etc/systemd/system/mailinabox.service <<EOF;
 [Unit]
-Description=Servidor TCP/IP-Serie para la comunicacion con los sensores del Arduino
+Description=Mail In a Box Management Service
 After=syslog.target network.target
 [Service]
 ExecStart=$inst_dir/start
