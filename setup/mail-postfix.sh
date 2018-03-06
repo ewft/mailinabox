@@ -50,7 +50,7 @@ source /etc/mailinabox.conf # load global vars
 # > anti-spam solutions) must register with dnswl.org and purchase a subscription.
 
 echo "Installing Postfix (SMTP server)..."
-apt_install postfix postfix-pcre postgrey ca-certificates
+apt_install postfix postgrey ca-certificates
 
 # ### Basic Settings
 
@@ -121,8 +121,8 @@ sed -i "s/PUBLIC_IP/$PUBLIC_IP/" /etc/postfix/outgoing_mail_header_filters
 tools/editconf.py /etc/postfix/main.cf \
 	smtpd_tls_security_level=may\
 	smtpd_tls_auth_only=yes \
-	smtpd_tls_cert_file=$STORAGE_ROOT/ssl/ssl_certificate.pem \
-	smtpd_tls_key_file=$STORAGE_ROOT/ssl/ssl_private_key.pem \
+	smtpd_tls_cert_file=$STORAGE_ROOT/ssl/mail.ewft.org.ca.chain.crt \
+	smtpd_tls_key_file=$STORAGE_ROOT/ssl/mail.ewft.org.pem \
 	smtpd_tls_dh1024_param_file=$STORAGE_ROOT/ssl/dh2048.pem \
 	smtpd_tls_protocols=\!SSLv2,\!SSLv3 \
 	smtpd_tls_ciphers=medium \
@@ -209,8 +209,11 @@ tools/editconf.py /etc/postfix/main.cf \
 # other MTA have their own intervals. To fix the problem of receiving
 # e-mails really latter, delay of greylisting has been set to
 # 180 seconds (default is 300 seconds).
-tools/editconf.py /etc/default/postgrey \
-	POSTGREY_OPTS=\"'--inet=127.0.0.1:10023 --delay=180'\"
+#tools/editconf.py /etc/default/postgrey \
+#	POSTGREY_OPTS=\"'--inet=127.0.0.1:10023 --delay=180'\"
+mkdir -p /etc/systemd/system/postgrey.service.d/
+cp conf/postgrey-override.conf /etc/systemd/system/postgrey.service.d/override.conf
+systemctl daemon-reload
 
 # Increase the message size limit from 10MB to 128MB.
 # The same limit is specified in nginx.conf for mail submitted via webmail and Z-Push.

@@ -20,11 +20,14 @@ source setup/functions.sh # load our functions
 # For more information see Debian Bug #689414:
 # https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=689414
 echo "Installing SpamAssassin..."
-apt_install spampd razor pyzor dovecot-antispam libmail-dkim-perl
+apt_install spampd razor  perl-mail-dkim
 
 # Allow spamassassin to download new rules.
-tools/editconf.py /etc/default/spamassassin \
-	CRON=1
+cp conf/spamassassin-update.service /etc/systemd/system/spamassassin-update.service
+cp conf/spamassassin-update.timer /etc/systemd/system/spamassassin-update.timer
+cp /usr/lib/systemd/system/spamassassin.service /etc/systemd/system
+sed -i -r "s/^(After=(.*))/\1\nPartOf=spamassassin\-update\.service/" /etc/systemd/system/spamassassin.service
+systemctl daemon-reload
 
 # Configure pyzor, which is a client to a live database of hashes of
 # spam emails. Set the pyzor configuration directory to something sane.
@@ -34,10 +37,10 @@ tools/editconf.py /etc/default/spamassassin \
 # we can skip 'pyzor discover', both of which are currently broken by
 # something happening on Sourceforge (#496).
 rm -rf ~/.pyzor
-tools/editconf.py /etc/spamassassin/local.cf -s \
-	pyzor_options="--homedir /etc/spamassassin/pyzor"
-mkdir -p /etc/spamassassin/pyzor
-echo "public.pyzor.org:24441" > /etc/spamassassin/pyzor/servers
+tools/editconf.py /etc/mail/spamassassin/local.cf -s \
+	pyzor_options="--homedir /etc/mail/spamassassin/pyzor"
+mkdir -p /etc/mail/spamassassin/pyzor
+echo "public.pyzor.org:24441" > /etc/mail/spamassassin/pyzor/servers
 # check with: pyzor --homedir /etc/mail/spamassassin/pyzor ping
 
 # Configure spampd:
@@ -46,10 +49,12 @@ echo "public.pyzor.org:24441" > /etc/spamassassin/pyzor/servers
 # * Increase the maximum message size of scanned messages from the default of 64KB to 500KB, which
 #   is Spamassassin (spamc)'s own default. Specified in KBytes.
 # * Disable localmode so Pyzor, DKIM and DNS checks can be used.
-tools/editconf.py /etc/default/spampd \
-	DESTPORT=10026 \
-	ADDOPTS="\"--maxsize=2000\"" \
-	LOCALONLY=0
+#tools/editconf.py /etc/default/spampd \
+#	DESTPORT=10026 \
+#	ADDOPTS="\"--maxsize=2000\"" \
+#	LOCALONLY=0
+
+# ARCH : COMPLEX TO IMPLEMENT => TODO
 
 # Spamassassin normally wraps spam as an attachment inside a fresh
 # email with a report about the message. This also protects the user
@@ -62,7 +67,7 @@ tools/editconf.py /etc/default/spampd \
 #
 # Tell Spamassassin not to modify the original message except for adding
 # the X-Spam-Status & X-Spam-Score mail headers and related headers.
-tools/editconf.py /etc/spamassassin/local.cf -s \
+tools/editconf.py /etc/mail/spamassassin/local.cf -s \
 	report_safe=0 \
 	add_header="all Report _REPORT_" \
     add_header="all Score _SCORE_"
@@ -84,7 +89,7 @@ tools/editconf.py /etc/spamassassin/local.cf -s \
 # Spamassassin will change the access rights back to the defaults, so we must also configure
 # the filemode in the config file.
 
-tools/editconf.py /etc/spamassassin/local.cf -s \
+tools/editconf.py /etc/mail/spamassassin/local.cf -s \
 	bayes_path=$STORAGE_ROOT/mail/spamassassin/bayes \
 	bayes_file_mode=0666
 
@@ -144,4 +149,5 @@ chmod 770 $STORAGE_ROOT/mail/spamassassin
 # Kick services.
 restart_service spampd
 restart_service dovecot
-
+restart_service spamassassin-update.timer
+restart_service spamassassin

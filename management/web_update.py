@@ -109,7 +109,7 @@ def do_web_update(env):
 	# don't do a 'restart'. That would kill the connection before
 	# the API returns its response. A 'reload' should be good
 	# enough and doesn't break any open connections.
-	shell('check_call', ["/usr/sbin/service", "nginx", "reload"])
+	shell('check_call', ["/usr/sbin/systemctl", "reload", "nginx"])
 
 	return "web updated\n"
 

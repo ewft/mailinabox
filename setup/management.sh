@@ -12,11 +12,11 @@ echo "Installing Mail-in-a-Box system management daemon..."
 # S3 api used in some regions, which breaks backups to those regions.
 # See #627, #653.
 apt_install duplicity python-pip
-hide_output pip2 install --upgrade boto
+hide_output pip install --upgrade boto
 
 # These are required to build/install the cryptography Python package
 # used by our management daemon.
-apt_install python-virtualenv build-essential libssl-dev libffi-dev python3-dev
+apt_install python-virtualenv base-devel openssl libffi python3
 
 # Create a virtualenv for the installation of Python 3 packages
 # used by the management daemon.
@@ -96,20 +96,27 @@ rm -f /tmp/bootstrap.zip
 
 # Create an init script to start the management daemon and keep it
 # running after a reboot.
-rm -f /usr/local/bin/mailinabox-daemon # old path
 cat > $inst_dir/start <<EOF;
 #!/bin/bash
 source $venv/bin/activate
 python `pwd`/management/daemon.py
 EOF
-chmod +x $inst_dir/start
-rm -f /etc/init.d/mailinabox
-ln -s $(pwd)/conf/management-initscript /etc/init.d/mailinabox
-hide_output update-rc.d mailinabox defaults
 
-# Remove old files we no longer use.
-rm -f /etc/cron.daily/mailinabox-backup
-rm -f /etc/cron.daily/mailinabox-statuschecks
+chmod +x $inst_dir/start
+
+cat > /etc/systemd/system/mailinabox.service <<EOF;
+[Unit]
+Description=Servidor TCP/IP-Serie para la comunicacion con los sensores del Arduino
+After=syslog.target network.target
+[Service]
+ExecStart=$inst_dir/start
+Restart=on-abort
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl daemon-reload
+
 
 # Perform nightly tasks at 3am in system time: take a backup, run
 # status checks and email the administrator any changes.

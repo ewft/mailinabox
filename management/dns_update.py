@@ -94,12 +94,12 @@ def do_dns_update(env, force=False):
 
 	# Kick nsd if anything changed.
 	if len(updated_domains) > 0:
-		shell('check_call', ["/usr/sbin/service", "nsd", "restart"])
+		shell('check_call', ["/usr/sbin/systemctl", "restart", "nsd"])
 
 	# Write the OpenDKIM configuration tables for all of the domains.
 	if write_opendkim_tables(get_mail_domains(env), env):
 		# Settings changed. Kick opendkim.
-		shell('check_call', ["/usr/sbin/service", "opendkim", "restart"])
+		shell('check_call', ["/usr/sbin/systemctl", "restart", "opendkim"])
 		if len(updated_domains) == 0:
 			# If this is the only thing that changed?
 			updated_domains.append("OpenDKIM configuration")
@@ -117,6 +117,7 @@ def do_dns_update(env, force=False):
 ########################################################################
 
 def build_zones(env):
+
 	# What domains (and their zone filenames) should we build?
 	domains = get_dns_domains(env)
 	zonefiles = get_dns_zones(env)
@@ -125,7 +126,7 @@ def build_zones(env):
 	additional_records = list(get_custom_dns_config(env))
 	from web_update import get_web_domains
 	www_redirect_domains = set(get_web_domains(env)) - set(get_web_domains(env, include_www_redirects=False))
-
+	
 	# Build DNS records for each zone.
 	for domain, zonefile in zonefiles:
 		# Build the records to put in the zone.
@@ -154,7 +155,6 @@ def build_zone(domain, all_domains, additional_records, www_redirect_domains, en
 		for secondary_ns in secondary_ns_list:
 			records.append((None,  "NS", secondary_ns+'.', False))
 
-
 	# In PRIMARY_HOSTNAME...
 	if domain == env["PRIMARY_HOSTNAME"]:
 		# Define ns1 and ns2.
@@ -178,8 +178,8 @@ def build_zone(domain, all_domains, additional_records, www_redirect_domains, en
 		records.append(("_443._tcp", "TLSA", build_tlsa_record(env), "Optional. When DNSSEC is enabled, provides out-of-band HTTPS certificate validation for a few web clients that support it."))
 
 		# Add a SSHFP records to help SSH key validation. One per available SSH key on this system.
-		for value in build_sshfp_records():
-			records.append((None, "SSHFP", value, "Optional. Provides an out-of-band method for verifying an SSH key before connecting. Use 'VerifyHostKeyDNS yes' (or 'VerifyHostKeyDNS ask') when connecting with ssh."))
+	#	for value in build_sshfp_records():
+	#		records.append((None, "SSHFP", value, "Optional. Provides an out-of-band method for verifying an SSH key before connecting. Use 'VerifyHostKeyDNS yes' (or 'VerifyHostKeyDNS ask') when connecting with ssh."))
 
 	# Add DNS records for any subdomains of this domain. We should not have a zone for
 	# both a domain and one of its subdomains.

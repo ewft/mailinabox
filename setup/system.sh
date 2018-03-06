@@ -70,37 +70,16 @@ fi
 
 # ### Add Mail-in-a-Box's PPA.
 
-# We've built several .deb packages on our own that we want to include.
-# One is a replacement for Ubuntu's stock postgrey package that makes
-# some enhancements. The other is dovecot-lucene, a Lucene-based full
-# text search plugin for (and by) dovecot, which is not available in
-# Ubuntu currently.
-#
-# So, first ensure add-apt-repository is installed, then use it to install
-# the [mail-in-a-box ppa](https://launchpad.net/~mail-in-a-box/+archive/ubuntu/ppa).
-
-
-if [ ! -f /usr/bin/add-apt-repository ]; then
-	echo "Installing add-apt-repository..."
-	hide_output apt-get update
-	apt_install software-properties-common
-fi
-
-hide_output add-apt-repository -y ppa:mail-in-a-box/ppa
-
 # ### Update Packages
 
 # Update system packages to make sure we have the latest upstream versions of things from Ubuntu.
 
 echo Updating system packages...
-hide_output apt-get update
-apt_get_quiet upgrade
+hide_output pacman -Syyu --noconfirm
 
 # Old kernels pile up over time and take up a lot of disk space, and because of Mail-in-a-Box
 # changes there may be other packages that are no longer needed. Clear out anything apt knows
 # is safe to delete.
-
-apt_get_quiet autoremove
 
 # ### Install System Packages
 
@@ -120,30 +99,11 @@ apt_get_quiet autoremove
 # * bc: allows us to do math to compute sane defaults
 
 echo Installing system packages...
-apt_install python3 python3-dev python3-pip \
-	netcat-openbsd wget curl git sudo coreutils bc \
-	haveged pollinate unzip \
-	unattended-upgrades cron ntp fail2ban
+apt_install python python-pip \
+	openbsd-netcat wget curl git sudo coreutils bc \
+	haveged unzip openssh \
+	cronie ntp fail2ban
 
-# ### Add PHP7 PPA
-
-# Nextcloud requires PHP7, we will install the ppa from ubuntu php maintainer Ondřej Surý
-# The PPA is located here https://launchpad.net/%7Eondrej/+archive/ubuntu/php
-# Unattended upgrades are activated for the repository If it appears it's already
-# installed, don't do it again so we can avoid an unnecessary call to apt-get update.
-if [ ! -f /etc/apt/sources.list.d/ondrej-php-trusty.list ]; then
-hide_output add-apt-repository -y ppa:ondrej/php
-apt_add_repository_to_unattended_upgrades LP-PPA-ondrej-php:trusty
-hide_output apt-get update
-fi
-
-# ### Suppress Upgrade Prompts
-# Since Mail-in-a-Box might jump straight to 18.04 LTS, there's no need
-# to be reminded about 16.04 on every login.
-if [ -f /etc/update-manager/release-upgrades ]; then
-	tools/editconf.py /etc/update-manager/release-upgrades Prompt=never
-	rm -f /var/lib/ubuntu-release-upgrader/release-upgrade-available
-fi
 
 # ### Set the system timezone
 #
@@ -159,23 +119,23 @@ fi
 # section) and syslog (see #328). There might be other issues, and it's
 # not likely the user will want to change this, so we only ask on first
 # setup.
-if [ -z "$NONINTERACTIVE" ]; then
-	if [ ! -f /etc/timezone ] || [ ! -z $FIRST_TIME_SETUP ]; then
-		# If the file is missing or this is the user's first time running
-		# Mail-in-a-Box setup, run the interactive timezone configuration
-		# tool.
-		dpkg-reconfigure tzdata
-		restart_service rsyslog
-	fi
-else
-	# This is a non-interactive setup so we can't ask the user.
-	# If /etc/timezone is missing, set it to UTC.
-	if [ ! -f /etc/timezone ]; then
-		echo "Setting timezone to UTC."
-		echo "Etc/UTC" > /etc/timezone
-		restart_service rsyslog
-	fi
-fi
+#if [ -z "$NONINTERACTIVE" ]; then
+#	if [ ! -f /etc/timezone ] || [ ! -z $FIRST_TIME_SETUP ]; then
+#		# If the file is missing or this is the user's first time running
+#		# Mail-in-a-Box setup, run the interactive timezone configuration
+#		# tool.
+#		dpkg-reconfigure tzdata
+#		restart_service rsyslog
+#	fi
+#else
+#	# This is a non-interactive setup so we can't ask the user.
+#	# If /etc/timezone is missing, set it to UTC.
+#	if [ ! -f /etc/timezone ]; then
+#		echo "Setting timezone to UTC."
+#		echo "Etc/UTC" > /etc/timezone
+#		restart_service rsyslog
+#	fi
+#fi
 
 # ### Seed /dev/urandom
 #
@@ -229,8 +189,8 @@ dd if=/dev/random of=/dev/urandom bs=1 count=32 2> /dev/null
 # This is supposedly sufficient. But because we're not sure if hardware entropy
 # is really any good on virtualized systems, we'll also seed from Ubuntu's
 # pollinate servers:
-
-pollinate  -q -r
+#TODO Find alternative on Archlinux
+#pollinate  -q -r
 
 # Between these two, we really ought to be all set.
 
@@ -244,12 +204,12 @@ fi
 #
 # Allow apt to install system updates automatically every day.
 
-cat > /etc/apt/apt.conf.d/02periodic <<EOF;
-APT::Periodic::MaxAge "7";
-APT::Periodic::Update-Package-Lists "1";
-APT::Periodic::Unattended-Upgrade "1";
-APT::Periodic::Verbose "0";
-EOF
+#cat > /etc/apt/apt.conf.d/02periodic <<EOF;
+#APT::Periodic::MaxAge "7";
+#APT::Periodic::Update-Package-Lists "1";
+#APT::Periodic::Unattended-Upgrade "1";
+#APT::Periodic::Verbose "0";
+#EOF
 
 # ### Firewall
 
@@ -303,13 +263,15 @@ fi #NODOC
 #   name server, on IPV6.
 # * The listen-on directive in named.conf.options restricts `bind9` to
 #   binding to the loopback interface instead of all interfaces.
-apt_install bind9 resolvconf
-tools/editconf.py /etc/default/bind9 \
-	RESOLVCONF=yes \
-	"OPTIONS=\"-u bind -4\""
-if ! grep -q "listen-on " /etc/bind/named.conf.options; then
+apt_install bind resolvconf
+#tools/editconf.py /etc/default/bind9 \
+#	RESOLVCONF=yes \
+#	"OPTIONS=\"-u bind -4\""
+sed -i -r 's/(.*)\/\/(.*)listen-on(.*)//g' /etc/named.conf
+
+if ! grep -q "listen-on " /etc/named.conf; then
 	# Add a listen-on directive if it doesn't exist inside the options block.
-	sed -i "s/^}/\n\tlisten-on { 127.0.0.1; };\n}/" /etc/bind/named.conf.options
+	sed -i "s/^}/\n\tlisten-on { 127.0.0.1; };\n}/" /etc/named.conf
 fi
 if [ -f /etc/resolvconf/resolv.conf.d/original ]; then
 	echo "Archiving old resolv.conf (was /etc/resolvconf/resolv.conf.d/original, now /etc/resolvconf/resolv.conf.original)." #NODOC
@@ -318,8 +280,8 @@ fi
 
 # Restart the DNS services.
 
-restart_service bind9
-restart_service resolvconf
+systemctl restart named
+#systemctl restart resolvconf
 
 # ### Fail2Ban Service
 
@@ -336,4 +298,4 @@ cp -f conf/fail2ban/filter.d/* /etc/fail2ban/filter.d/
 # Roundcube for the first time. This causes fail2ban to fail to start. Later
 # scripts will ensure the files exist and then fail2ban is given another
 # restart at the very end of setup.
-restart_service fail2ban
+systemctl restart fail2ban

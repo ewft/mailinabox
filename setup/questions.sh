@@ -8,8 +8,8 @@ if [ -z "$NONINTERACTIVE" ]; then
 	# Also install dependencies needed to validate the email address.
 	if [ ! -f /usr/bin/dialog ] || [ ! -f /usr/bin/python3 ] || [ ! -f /usr/bin/pip3 ]; then
 		echo Installing packages needed for setup...
-		apt-get -q -q update
-		apt_get_quiet install dialog python3 python3-pip  || exit 1
+		pacman -Sy
+		pacman --noconfirm -S dialog python python-pip  || exit 1
 	fi
 
 	# Installing email_validator is repeated in setup/management.sh, but in setup/management.sh
@@ -82,6 +82,37 @@ address, so we're suggesting $DEFAULT_PRIMARY_HOSTNAME.
 		exit
 	fi
 fi
+if [ -z "$SQL_SERVER" ]; then
+	input_box "SQL Server" "SQL Server for Roundcube!\n\nSQL server:" $DEFAULT_SQL_SERVER SQL_SERVER
+	if [ -z "$SQL_SERVER" ]; then
+		# user hit ESC/cancel
+	        exit
+	fi
+fi
+if [ -z "$SQL_USER" ]; then
+        input_box "SQL USer" "SQL User for Roundcube!\n\nSQL user:" $DEFAULT_SQL_USER SQL_USER
+        if [ -z "$SQL_USER" ]; then
+                # user hit ESC/cancel
+                exit
+        fi
+fi
+
+if [ -z "$SQL_PASSWORD" ]; then
+        input_box "SQL user Password" "SQL user password for Roundcube!\n\nSQL password:" $DEFAULT_SQL_PASSWORD SQL_PASSWORD
+        if [ -z "$SQL_PASSWORD" ]; then
+                # user hit ESC/cancel
+                exit
+        fi
+fi
+
+if [ -z "$SQL_DATABASE" ]; then
+        input_box "SQL Database" "SQL Database for Roundcube!\n\nSQL database:" $DEFAULT_SQL_DATABASE SQL_DATABASE
+        if [ -z "$SQL_DATABASE" ]; then
+                # user hit ESC/cancel
+                exit
+        fi
+fi
+
 
 # If the machine is behind a NAT, inside a VM, etc., it may not know
 # its IP address on the public network / the Internet. Ask the Internet

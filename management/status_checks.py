@@ -21,7 +21,7 @@ from utils import shell, sort_domains, load_env_vars_from_file, load_settings
 def get_services():
 	return [
 		{ "name": "Local DNS (bind9)", "port": 53, "public": False, },
-		#{ "name": "NSD Control", "port": 8952, "public": False, },
+		# { "name": "NSD Control", "port": 8952, "public": False, },
 		{ "name": "Local DNS Control (bind9/rndc)", "port": 953, "public": False, },
 		{ "name": "Dovecot LMTP LDA", "port": 10026, "public": False, },
 		{ "name": "Postgrey", "port": 10023, "public": False, },
@@ -30,15 +30,15 @@ def get_services():
 		{ "name": "OpenDMARC", "port": 8893, "public": False, },
 		{ "name": "Memcached", "port": 11211, "public": False, },
 		{ "name": "Mail-in-a-Box Management Daemon", "port": 10222, "public": False, },
-		{ "name": "SSH Login (ssh)", "port": get_ssh_port(), "public": True, },
-		{ "name": "Public DNS (nsd4)", "port": 53, "public": True, },
-		{ "name": "Incoming Mail (SMTP/postfix)", "port": 25, "public": True, },
-		{ "name": "Outgoing Mail (SMTP 587/postfix)", "port": 587, "public": True, },
+		#{ "name": "SSH Login (ssh)", "port": get_ssh_port(), "public": True, },
+		{ "name": "Public DNS (nsd4)", "port": 53, "public": False, },
+		{ "name": "Incoming Mail (SMTP/postfix)", "port": 25, "public": False, },
+		{ "name": "Outgoing Mail (SMTP 587/postfix)", "port": 587, "public": False, },
 		#{ "name": "Postfix/master", "port": 10587, "public": True, },
-		{ "name": "IMAPS (dovecot)", "port": 993, "public": True, },
-		{ "name": "Mail Filters (Sieve/dovecot)", "port": 4190, "public": True, },
-		{ "name": "HTTP Web (nginx)", "port": 80, "public": True, },
-		{ "name": "HTTPS Web (nginx)", "port": 443, "public": True, },
+		{ "name": "IMAPS (dovecot)", "port": 993, "public": False, },
+		{ "name": "Mail Filters (Sieve/dovecot)", "port": 4190, "public": False, },
+		{ "name": "HTTP Web (nginx)", "port": 80, "public": False, },
+		#{ "name": "HTTPS Web (nginx)", "port": 443, "public": True, },
 	]
 
 def run_checks(rounded_values, env, output, pool):
@@ -56,21 +56,24 @@ def run_checks(rounded_values, env, output, pool):
 	# (ignore errors; if bind9/rndc isn't running we'd already report
 	# that in run_services checks.)
 	shell('check_call', ["/usr/sbin/rndc", "flush"], trap=True)
-
+	
 	run_system_checks(rounded_values, env, output)
 
 	# perform other checks asynchronously
 
 	run_network_checks(env, output)
-	run_domain_checks(rounded_values, env, output, pool)
+#	run_domain_checks(rounded_values, env, output, pool)
 
 def get_ssh_port():
 	# Returns ssh port
 	try:
-		output = shell('check_output', ['sshd', '-T'])
+		#output = shell('check_output', ['sshd', '-T'])
+		pass
 	except FileNotFoundError:
 		# sshd is not installed. That's ok.
 		return None
+	except :
+		return False
 
 	returnNext = False
 	for e in output.split():
@@ -139,7 +142,7 @@ def check_service(i, service, env):
 
 		# IPv4 failed. Try the private IP to see if the service is running but not accessible (except DNS because a different service runs on the private IP).
 		elif service["port"] != 53 and try_connect("127.0.0.1"):
-			output.print_error("%s is running but is not publicly accessible at %s:%d." % (service['name'], env['PUBLIC_IP'], service['port']))
+			output.print_warning("%s is running but is not publicly accessible at %s:%d." % (service['name'], env['PUBLIC_IP'], service['port']))
 		else:
 			output.print_error("%s is not running (port %d)." % (service['name'], service['port']))
 
@@ -760,11 +763,14 @@ def list_apt_updates(apt_update=True):
 	# Run apt-get update to refresh package list. This should be running daily
 	# anyway, so on the status checks page don't do this because it is slow.
 	if apt_update:
-		shell("check_call", ["/usr/bin/apt-get", "-qq", "update"])
-
+		#shell("check_call", ["/usr/bin/apt-get", "-qq", "update"])
+		pass
+		# TODO
 	# Run apt-get upgrade in simulate mode to get a list of what
 	# it would do.
-	simulated_install = shell("check_output", ["/usr/bin/apt-get", "-qq", "-s", "upgrade"])
+	# simulated_install = shell("check_output", ["/usr/bin/apt-get", "-qq", "-s", "upgrade"])
+	#TODO
+	simulated_install = ""
 	pkgs = []
 	for line in simulated_install.split('\n'):
 		if line.strip() == "":

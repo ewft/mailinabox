@@ -24,14 +24,21 @@ source /etc/mailinabox.conf # load global vars
 # not by Ubuntu.
 
 echo "Installing Dovecot (IMAP server)..."
-apt_install \
-	dovecot-core dovecot-imapd dovecot-pop3d dovecot-lmtpd dovecot-sqlite sqlite3 \
-	dovecot-sieve dovecot-managesieved dovecot-lucene
+apt_install dovecot sqlite3 pigeonhole clucene
 
 # The `dovecot-imapd`, `dovecot-pop3d`, and `dovecot-lmtpd` packages automatically
 # enable IMAP, POP and LMTP protocols.
 
+if [ ! -e "/etc/dovecot/dovecot.conf" ] 
+then
+	cp -r /usr/share/doc/dovecot/example-config/* /etc/dovecot/
+fi
 # Set basic daemon options.
+
+
+tools/editconf.py /etc/dovecot/dovecot.conf \
+	"protocols = imap pop3 lmtp sieve"
+
 
 # The `default_process_limit` is 100, which constrains the total number
 # of active IMAP connections (at, say, 5 open connections per user that
@@ -54,7 +61,8 @@ tools/editconf.py /etc/dovecot/conf.d/10-master.conf \
 # See http://www.dovecot.org/pipermail/dovecot/2013-March/088834.html.
 # A reboot is required for this to take effect (which we don't do as
 # as a part of setup). Test with `cat /proc/sys/fs/inotify/max_user_instances`.
-tools/editconf.py /etc/sysctl.conf \
+touch /etc/sysctl.d/mailinabox.conf
+tools/editconf.py /etc/sysctl.d/mailinabox.conf \
 	fs.inotify.max_user_instances=1024
 
 # Set the location where we'll store user mailboxes. '%d' is the domain name and '%n' is the
@@ -84,10 +92,10 @@ tools/editconf.py /etc/dovecot/conf.d/10-ssl.conf \
 	ssl=required \
 	"ssl_cert=<$STORAGE_ROOT/ssl/ssl_certificate.pem" \
 	"ssl_key=<$STORAGE_ROOT/ssl/ssl_private_key.pem" \
-	"ssl_protocols=!SSLv3 !SSLv2" \
+	"ssl_min_protocol = TLSv1.2" \
 	"ssl_cipher_list=ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA:ECDHE-RSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-RSA-AES256-SHA256:DHE-RSA-AES256-SHA:ECDHE-ECDSA-DES-CBC3-SHA:ECDHE-RSA-DES-CBC3-SHA:EDH-RSA-DES-CBC3-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA:DES-CBC3-SHA:!DSS" \
 	"ssl_prefer_server_ciphers = yes" \
-	"ssl_dh_parameters_length = 2048"
+	"ssl_dh = </etc/dovecot/dh.pem"
 
 # Disable in-the-clear IMAP/POP because there is no reason for a user to transmit
 # login credentials outside of an encrypted connection. Only the over-TLS versions
@@ -210,6 +218,8 @@ mkdir -p $STORAGE_ROOT/mail/sieve
 mkdir -p $STORAGE_ROOT/mail/sieve/global_before
 mkdir -p $STORAGE_ROOT/mail/sieve/global_after
 chown -R mail.mail $STORAGE_ROOT/mail/sieve
+
+chmod +x /home/user-data/
 
 # Allow the IMAP/POP ports in the firewall.
 ufw_allow imaps

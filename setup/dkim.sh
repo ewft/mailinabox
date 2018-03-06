@@ -11,21 +11,26 @@ source /etc/mailinabox.conf # load global vars
 
 # Install DKIM...
 echo Installing OpenDKIM/OpenDMARC...
-apt_install opendkim opendkim-tools opendmarc
+apt_install opendkim opendmarc
 
-# Make sure configuration directories exist.
-mkdir -p /etc/opendkim;
 mkdir -p $STORAGE_ROOT/mail/dkim
+
+if [ ! -e "/etc/opendkim/opendkim.conf" ]
+then
+	cp /etc/opendkim/opendkim.conf.sample /etc/opendkim/opendkim.conf
+fi
 
 # Used in InternalHosts and ExternalIgnoreList configuration directives.
 # Not quite sure why.
 echo "127.0.0.1" > /etc/opendkim/TrustedHosts
+touch /etc/opendkim/SigningTable
+touch /etc/opendkim/KeyTable
 
-if grep -q "ExternalIgnoreList" /etc/opendkim.conf; then
+if grep -q "ExternalIgnoreList" /etc/opendkim/opendkim.conf; then
 	true # already done #NODOC
 else
 	# Add various configuration options to the end of `opendkim.conf`.
-	cat >> /etc/opendkim.conf << EOF;
+	cat >> /etc/opendkim/opendkim.conf << EOF;
 MinimumKeyBits          1024
 ExternalIgnoreList      refile:/etc/opendkim/TrustedHosts
 InternalHosts           refile:/etc/opendkim/TrustedHosts
@@ -54,7 +59,7 @@ fi
 chown -R opendkim:opendkim $STORAGE_ROOT/mail/dkim
 chmod go-rwx $STORAGE_ROOT/mail/dkim
 
-tools/editconf.py /etc/opendmarc.conf -s \
+tools/editconf.py /etc/opendmarc/opendmarc.conf -s \
 	"Syslog=true" \
 	"Socket=inet:8893@[127.0.0.1]"
 

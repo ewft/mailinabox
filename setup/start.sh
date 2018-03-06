@@ -93,6 +93,10 @@ PUBLIC_IP=$PUBLIC_IP
 PUBLIC_IPV6=$PUBLIC_IPV6
 PRIVATE_IP=$PRIVATE_IP
 PRIVATE_IPV6=$PRIVATE_IPV6
+SQL_SERVER=$SQL_SERVER
+SQL_USER=$SQL_USER
+SQL_PASSWORD=$SQL_PASSWORD
+SQL_DATABASE=$SQL_DATABASE
 EOF
 
 # Start service configuration.
@@ -106,8 +110,8 @@ source setup/dkim.sh
 source setup/spamassassin.sh
 source setup/web.sh
 source setup/webmail.sh
-source setup/owncloud.sh
-source setup/zpush.sh
+#source setup/owncloud.sh
+#source setup/zpush.sh
 source setup/management.sh
 source setup/munin.sh
 
@@ -129,7 +133,7 @@ restart_service fail2ban
 
 # If DNS is already working, try to provision TLS certficates from Let's Encrypt.
 # Suppress extra reasons why domains aren't getting a new certificate.
-management/ssl_certificates.py -q
+#management/ssl_certificates.py -q
 
 # If there aren't any mail users yet, create one.
 source setup/firstuser.sh

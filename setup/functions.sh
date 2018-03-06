@@ -3,7 +3,7 @@ function hide_output {
 	# and returns a non-zero exit code.
 
 	# Get a temporary file.
-	OUTPUT=$(tempfile)
+	OUTPUT=$(mktemp)
 
 	# Execute command, redirecting stderr/stdout to the temporary file.
 	$@ &> $OUTPUT
@@ -35,7 +35,9 @@ function apt_get_quiet {
 	# Although we could pass -qq to apt-get to make output quieter, many packages write to stdout
 	# and stderr things that aren't really important. Use our hide_output function to capture
 	# all of that and only show it if there is a problem (i.e. if apt_get returns a failure exit status).
-	DEBIAN_FRONTEND=noninteractive hide_output apt-get -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confnew" "$@"
+	PACKAGES=$@
+        hide_output pacman --noprogressbar --needed --noconfirm -S $PACKAGES
+
 }
 
 function apt_install {
@@ -45,7 +47,7 @@ function apt_install {
 	# and doesn't affect what we actually do, except in the messages, so let's
 	# not do that anymore.
 	PACKAGES=$@
-	apt_get_quiet install $PACKAGES
+	hide_output pacman --noprogressbar --needed --noconfirm -S $PACKAGES
 }
 
 function apt_add_repository_to_unattended_upgrades {
@@ -142,7 +144,8 @@ function ufw_allow {
 }
 
 function restart_service {
-	hide_output service $1 restart
+	hide_output systemctl enable $1
+	systemctl restart $1
 }
 
 ## Dialog Functions ##

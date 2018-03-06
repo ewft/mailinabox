@@ -7,7 +7,7 @@ source /etc/mailinabox.conf # load global vars
 
 # install Munin
 echo "Installing Munin (system monitoring)..."
-apt_install munin munin-node libcgi-fast-perl
+apt_install munin munin-node perl-cgi-fast
 # libcgi-fast-perl is needed by /usr/lib/munin/cgi/munin-cgi-graph
 
 # edit config
@@ -34,8 +34,8 @@ contact.admin.always_send warning critical
 EOF
 
 # The Debian installer touches these files and chowns them to www-data:adm for use with spawn-fcgi
-chown munin. /var/log/munin/munin-cgi-html.log
-chown munin. /var/log/munin/munin-cgi-graph.log
+#chown munin. /var/log/munin/munin-cgi-html.log
+#chown munin. /var/log/munin/munin-cgi-graph.log
 
 # ensure munin-node knows the name of this machine
 # and reduce logging level to warning
@@ -61,8 +61,19 @@ done
 # Create a 'state' directory. Not sure why we need to do this manually.
 mkdir -p /var/lib/munin-node/plugin-state/
 
+
+mkdir -p /var/cache/munin/www
+chown munin. /var/cache/munin/www
+
+
+cp conf/munin-cron.timer /etc/systemd/system/munin-cron.timer
+cp conf/munin-cron.service /etc/systemd/system/munin-cron.service
+
+systemctl daemon-reload
+systemctl enable --now munin-cron.timer
+
 # Restart services.
-restart_service munin
+restart_service munin-cron.timer
 restart_service munin-node
 
 # generate initial statistics so the directory isn't empty
