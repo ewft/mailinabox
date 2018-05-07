@@ -125,6 +125,7 @@ chmod 664 $STORAGE_ROOT/mail/users.sqlite
 #chmod -R 774 ${RCM_PLUGIN_DIR}/carddav
 
 # Run Roundcube database migration script (database is created if it does not exist)
+${RCM_DIR}/bin/initdb.sh --dir ${RCM_DIR}/SQL --package roundcube
 ${RCM_DIR}/bin/updatedb.sh --dir ${RCM_DIR}/SQL --package roundcube
 #chown http:http $STORAGE_ROOT/mail/roundcube/roundcube.sqlite
 #chmod 664 $STORAGE_ROOT/mail/roundcube/roundcube.sqlite
