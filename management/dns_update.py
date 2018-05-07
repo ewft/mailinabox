@@ -144,16 +144,16 @@ def build_zone(domain, all_domains, additional_records, www_redirect_domains, en
 	#
 	# 'False' in the tuple indicates these records would not be used if the zone
 	# is managed outside of the box.
-	if is_zone:
-		# Obligatory definition of ns1.PRIMARY_HOSTNAME.
-		records.append((None,  "NS",  "ns1.%s." % env["PRIMARY_HOSTNAME"], False))
-
-		# Define ns2.PRIMARY_HOSTNAME or whatever the user overrides.
-		# User may provide one or more additional nameservers
-		secondary_ns_list = get_secondary_dns(additional_records, mode="NS") \
-			or ["ns2." + env["PRIMARY_HOSTNAME"]]
-		for secondary_ns in secondary_ns_list:
-			records.append((None,  "NS", secondary_ns+'.', False))
+#	if is_zone:
+#		# Obligatory definition of ns1.PRIMARY_HOSTNAME.
+#		records.append((None,  "NS",  "ns1.%s." % env["PRIMARY_HOSTNAME"], False))
+#
+#		# Define ns2.PRIMARY_HOSTNAME or whatever the user overrides.
+#		# User may provide one or more additional nameservers
+#		secondary_ns_list = get_secondary_dns(additional_records, mode="NS") \
+#			or ["ns2." + env["PRIMARY_HOSTNAME"]]
+#		for secondary_ns in secondary_ns_list:
+#			records.append((None,  "NS", secondary_ns+'.', False))
 
 	# In PRIMARY_HOSTNAME...
 	if domain == env["PRIMARY_HOSTNAME"]:
@@ -168,8 +168,8 @@ def build_zone(domain, all_domains, additional_records, www_redirect_domains, en
 
 		# Set the A/AAAA records. Do this early for the PRIMARY_HOSTNAME so that the user cannot override them
 		# and we can provide different explanatory text.
-		records.append((None, "A", env["PUBLIC_IP"], "Required. Sets the IP address of the box."))
-		if env.get("PUBLIC_IPV6"): records.append((None, "AAAA", env["PUBLIC_IPV6"], "Required. Sets the IPv6 address of the box."))
+#		records.append((None, "A", env["PUBLIC_IP"], "Required. Sets the IP address of the box."))
+#		if env.get("PUBLIC_IPV6"): records.append((None, "AAAA", env["PUBLIC_IPV6"], "Required. Sets the IPv6 address of the box."))
 
 		# Add a DANE TLSA record for SMTP.
 		records.append(("_25._tcp", "TLSA", build_tlsa_record(env), "Recommended when DNSSEC is enabled. Advertises to mail servers connecting to the box that mandatory encryption should be used."))
@@ -229,11 +229,11 @@ def build_zone(domain, all_domains, additional_records, www_redirect_domains, en
 		(None,  "A",    env["PUBLIC_IP"],       "Required. May have a different value. Sets the IP address that %s resolves to for web hosting and other services besides mail. The A record must be present but its value does not affect mail delivery." % domain),
 		(None,  "AAAA", env.get('PUBLIC_IPV6'), "Optional. Sets the IPv6 address that %s resolves to, e.g. for web hosting. (It is not necessary for receiving mail on this domain.)" % domain),
 	]
-	if "www." + domain in www_redirect_domains:
-		defaults += [
-			("www", "A",    env["PUBLIC_IP"],       "Optional. Sets the IP address that www.%s resolves to so that the box can provide a redirect to the parent domain." % domain),
-			("www", "AAAA", env.get('PUBLIC_IPV6'), "Optional. Sets the IPv6 address that www.%s resolves to so that the box can provide a redirect to the parent domain." % domain),
-		]
+#	if "www." + domain in www_redirect_domains:
+#		defaults += [
+#			("www", "A",    env["PUBLIC_IP"],       "Optional. Sets the IP address that www.%s resolves to so that the box can provide a redirect to the parent domain." % domain),
+#			("www", "AAAA", env.get('PUBLIC_IPV6'), "Optional. Sets the IPv6 address that www.%s resolves to so that the box can provide a redirect to the parent domain." % domain),
+#		]
 	for qname, rtype, value, explanation in defaults:
 		if value is None or value.strip() == "": continue # skip IPV6 if not set
 		if not is_zone and qname == "www": continue # don't create any default 'www' subdomains on what are themselves subdomains
@@ -282,11 +282,11 @@ def build_zone(domain, all_domains, additional_records, www_redirect_domains, en
 
 	# Add CardDAV/CalDAV SRV records on the non-primary hostname that points to the primary hostname.
 	# The SRV record format is priority (0, whatever), weight (0, whatever), port, service provider hostname (w/ trailing dot).
-	if domain != env["PRIMARY_HOSTNAME"]:
-		for dav in ("card", "cal"):
-			qname = "_" + dav + "davs._tcp"
-			if not has_rec(qname, "SRV"):
-				records.append((qname, "SRV", "0 0 443 " + env["PRIMARY_HOSTNAME"] + ".", "Recommended. Specifies the hostname of the server that handles CardDAV/CalDAV services for email addresses on this domain."))
+#	if domain != env["PRIMARY_HOSTNAME"]:
+#		for dav in ("card", "cal"):
+#			qname = "_" + dav + "davs._tcp"
+#			if not has_rec(qname, "SRV"):
+#				records.append((qname, "SRV", "0 0 443 " + env["PRIMARY_HOSTNAME"] + ".", "Recommended. Specifies the hostname of the server that handles CardDAV/CalDAV services for email addresses on this domain."))
 
 	# Sort the records. The None records *must* go first in the nsd zone file. Otherwise it doesn't matter.
 	records.sort(key = lambda rec : list(reversed(rec[0].split(".")) if rec[0] is not None else ""))

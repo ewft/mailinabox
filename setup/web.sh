@@ -17,6 +17,10 @@ apt_install nginx php php-fpm php-sqlite php-memcached memcached
 
 rm -f /etc/nginx/sites-enabled/default
 
+mkdir -p /etc/nginx/conf.d/
+cp -f conf/nginx-local.conf /etc/nginx/nginx.conf
+
+
 # Copy in a nginx configuration file for common and best-practices
 # SSL settings from @konklone. Replace STORAGE_ROOT so it can find
 # the DH params.
@@ -105,6 +109,5 @@ restart_service nginx
 restart_service php-fpm
 restart_service memcached
 # Open ports.
-#ufw_allow http
-#ufw_allow https
+ufw_allow http
 

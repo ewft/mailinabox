@@ -17,7 +17,7 @@ mkdir -p $STORAGE_ROOT/mail/dkim
 
 if [ ! -e "/etc/opendkim/opendkim.conf" ]
 then
-	cp /etc/opendkim/opendkim.conf.sample /etc/opendkim/opendkim.conf
+	cp /usr/share/doc/opendkim/opendkim.conf.sample /etc/opendkim/opendkim.conf
 fi
 
 # Used in InternalHosts and ExternalIgnoreList configuration directives.

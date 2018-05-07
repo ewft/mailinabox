@@ -204,12 +204,10 @@ fi
 #
 # Allow apt to install system updates automatically every day.
 
-#cat > /etc/apt/apt.conf.d/02periodic <<EOF;
-#APT::Periodic::MaxAge "7";
-#APT::Periodic::Update-Package-Lists "1";
-#APT::Periodic::Unattended-Upgrade "1";
-#APT::Periodic::Verbose "0";
-#EOF
+cp -f conf/autoupdate.* /etc/systemd/system/
+
+systemctl daemon-reload
+restart_service autoupdate.timer
 
 # ### Firewall
 
@@ -271,12 +269,16 @@ sed -i -r 's/(.*)\/\/(.*)listen-on(.*)//g' /etc/named.conf
 
 if ! grep -q "listen-on " /etc/named.conf; then
 	# Add a listen-on directive if it doesn't exist inside the options block.
-	sed -i "s/^}/\n\tlisten-on { 127.0.0.1; };\n}/" /etc/named.conf
+	sed -i 's/^};/\n\tlisten-on { 127.0.0.1\;}; \n};/;ta;b;:a;{n;ba;};' /etc/named.conf
 fi
 if [ -f /etc/resolvconf/resolv.conf.d/original ]; then
 	echo "Archiving old resolv.conf (was /etc/resolvconf/resolv.conf.d/original, now /etc/resolvconf/resolv.conf.original)." #NODOC
 	mv /etc/resolvconf/resolv.conf.d/original /etc/resolvconf/resolv.conf.original #NODOC
 fi
+
+rndc-confgen > /etc/rndc.conf
+rndc-confgen > /etc/rndc.key
+sed -i -e '/option/,$ s/.*//' /etc/rndc.key
 
 # Restart the DNS services.
 

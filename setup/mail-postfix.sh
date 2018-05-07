@@ -121,7 +121,7 @@ sed -i "s/PUBLIC_IP/$PUBLIC_IP/" /etc/postfix/outgoing_mail_header_filters
 tools/editconf.py /etc/postfix/main.cf \
 	smtpd_tls_security_level=may\
 	smtpd_tls_auth_only=yes \
-	smtpd_tls_cert_file=$STORAGE_ROOT/ssl/mail.ewft.org.ca.chain.crt \
+	smtpd_tls_cert_file=$STORAGE_ROOT/ssl/mail.ewft.org.pem \
 	smtpd_tls_key_file=$STORAGE_ROOT/ssl/mail.ewft.org.pem \
 	smtpd_tls_dh1024_param_file=$STORAGE_ROOT/ssl/dh2048.pem \
 	smtpd_tls_protocols=\!SSLv2,\!SSLv3 \
